@@ -1,0 +1,7 @@
+.venv/
+.vscode/
+gpt2/
+__pycache__
+loss-plot.pdf
+temperature-plot.pdf
+*.pth
