@@ -4,4 +4,11 @@ gpt2/
 __pycache__
 loss-plot.pdf
 temperature-plot.pdf
+accuracy-plot.pdf
 *.pth
+
+# Data files
+*.zip
+sms_spam_collection/
+*.csv
+instruction-data*.json

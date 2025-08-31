@@ -38,24 +38,21 @@ def download_and_unzip_spam_data(url, zip_path, extracted_path, data_file_path):
 
 download_and_unzip_spam_data(url, zip_path, extracted_path, data_file_path)
 
-
 # After executing the preceding code, the dataset is saved as a tab-separated text file,
 # SMSSpamCollection.tsv, in the sms_spam_collection folder.
 
-# We can load it into a pandas
-# DataFrame as follows:
+# We can load it into a pandas DataFrame as follows:
 
 import pandas as pd
 
 df = pd.read_csv(data_file_path, sep="\t", header=None, names=["Label", "Text"])
-df
 
 # When we check the class distribution, we see that the data contains "ham" (i.e., "not spam") much more frequently than "spam"
 
 print(df["Label"].value_counts())
 
-
-# For simplicity, and because we prefer a small dataset for educational purposes anyway (it will make it possible to finetune the LLM faster), we subsample (undersample) the dataset so that it contains 747 instances from each class
+# For simplicity, and because we prefer a small dataset for educational purposes anyway (it will make it possible to finetune the LLM faster), 
+# we subsample (undersample) the dataset so that it contains 747 instances from each class
 
 def create_balanced_dataset(df):
 
@@ -76,22 +73,19 @@ print(balanced_df["Label"].value_counts())
 # After executing the previous code to balance the dataset, we can see that we now have
 # equal amounts of spam and non-spam messages:
 
-# Next, we convert the "string" class labels "ham" and "spam" into integer class labels 0 and
-# 1, respectively:
+# Next, we convert the "string" class labels "ham" and "spam" into integer class labels 0 and 1, respectively:
 
 balanced_df["Label"] = balanced_df["Label"].map({"ham": 0, "spam": 1})
 
 # This process is similar to converting text into token IDs.
 
 # However, instead of using the GPT
-# vocabulary, which consists of more than 50,000 words, we are dealing with just two token
-# IDs: 0 and 1.
+# vocabulary, which consists of more than 50,000 words, we are dealing with just two token IDs: 0 and 1.
 
 # We create a random_split function to split the dataset into three parts: 70% for
 # training, 10% for validation, and 20% for testing.
 
-# (These ratios are common in machine
-# learning to train, adjust, and evaluate models.)
+# (These ratios are common in machine learning to train, adjust, and evaluate models.)
 
 def random_split(df, train_frac, validation_frac):
     # Shuffle the entire DataFrame
@@ -110,7 +104,6 @@ def random_split(df, train_frac, validation_frac):
 
 train_df, validation_df, test_df = random_split(balanced_df, 0.7, 0.1)
 # Test size is implied to be 0.2 as the remainder
-
 
 print(len(train_df))
 print(len(validation_df))
@@ -150,7 +143,6 @@ test_df.to_csv("test.csv", index=None)
 # For this purpose,
 # we use "<|endoftext|>" as a padding token, as discussed in chapter 2.
 
-
 # However, instead of appending the string "<|endoftext|>" to each of the text messages
 # directly, we can add the token ID corresponding to "<|endoftext|>" to the encoded text
 
@@ -165,7 +157,6 @@ test_df.to_csv("test.csv", index=None)
 
 import torch
 from torch.utils.data import Dataset
-
 
 class SpamDataset(Dataset):
     def __init__(self, csv_file, tokenizer, max_length=None, pad_token_id=50256):
@@ -213,9 +204,7 @@ class SpamDataset(Dataset):
         return max_length
 
 # Step 1: Pre-tokenize texts
-
 # Step 2: Truncate sequences if they are longer than max_length
-
 # Step 3: Pad sequences to the longest sequence
 
 # The SpamDataset class loads data from the CSV files we created earlier, tokenizes the text
@@ -225,6 +214,9 @@ class SpamDataset(Dataset):
 
 # This ensures each input tensor is of the same size, which is necessary to create the
 # batches in the training data loader we implement next:
+
+import tiktoken
+tokenizer = tiktoken.get_encoding("gpt2")
 
 train_dataset = SpamDataset(
     csv_file="train.csv",
@@ -374,6 +366,8 @@ assert train_dataset.max_length <= BASE_CONFIG["context_length"], (
 
 model_size = CHOOSE_MODEL.split(" ")[-1].lstrip("(").rstrip(")")
 
+from llm_from_scratch_1_2 import GPTModel, load_weights_into_gpt, generate_text_simple, generate, generate_and_print_sample, text_to_token_ids, token_ids_to_text
+
 # Corrected the module name from gpt_download3 to gpt_download
 from gpt_download import download_and_load_gpt2
 
@@ -446,7 +440,6 @@ print(token_ids_to_text(token_ids, tokenizer))
 # architecture via print(model), which prints the following:
 
 print(model)
-
 
 # Above, we can see the GPT architecture neatly laid out.
 
@@ -620,21 +613,13 @@ def calc_accuracy_loader(data_loader, model, device, num_batches=None):
 # Let's use the function to determine the classification accuracies across various datasets
 # estimated from 10 batches for efficiency:
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# Note:
-# Uncommenting the following lines will allow the code to run on Apple Silicon chips, if applicable,
-# which is approximately 2x faster than on an Apple CPU (as measured on an M3 MacBook Air).
-# As of this writing, in PyTorch 2.4, the results obtained via CPU and MPS were identical.
-# However, in earlier versions of PyTorch, you may observe different results when using MPS.
-
-#if torch.cuda.is_available():
-#    device = torch.device("cuda")
-#elif torch.backends.mps.is_available():
-#    device = torch.device("mps")
-#else:
-#    device = torch.device("cpu")
-#print(f"Running on {device} device.")
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
+else:
+    device = torch.device("cpu")
+print(f"Running on {device} device.")
 
 model.to(device) # no assignment model = model.to(device) necessary for nn.Module classes
 
@@ -1149,11 +1134,8 @@ print(tokenizer.encode("<|endoftext|>", allowed_special={"<|endoftext|>"}))
 # function as follows:
 
 # Step 1: Find the longest sequence in the batch
-
 # Step 2: Pad and prepare inputs
-
 # Step 3: Remove extra padded token added earlier
-
 # Step 4: Convert list of inputs to tensor and transfer to target device
 
 def custom_collate_draft_1(
@@ -1486,19 +1468,12 @@ print("loss_1 == loss_3:", loss_1 == loss_3)
 
 # The following code initializes the device variable:
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# Note:
-# Uncommenting the following lines will allow the code to run on Apple Silicon chips, if applicable,
-# which is much faster than on an Apple CPU (as measured on an M3 MacBook Air).
-# However, the resulting loss values may be slightly different.
-
-#if torch.cuda.is_available():
-#    device = torch.device("cuda")
-#elif torch.backends.mps.is_available():
-#    device = torch.device("mps")
-#else:
-#    device = torch.device("cpu")
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
+else:
+    device = torch.device("cpu")
 
 print("Device:", device)
 
@@ -1521,7 +1496,8 @@ from torch.utils.data import DataLoader
 
 
 num_workers = 0
-batch_size = 8
+batch_size = 2
+#batch_size = 8
 
 torch.manual_seed(123)
 
@@ -1578,10 +1554,7 @@ for inputs, targets in train_loader:
 
 ## STEP 4: LOADING A PRETRAINED LLM
 
-# Before beginning instruction finetuning, we first load a pretrained GPT model,
-
-# Instead of using the smallest 124 million
-# parameter model as before, we load the medium-sized model with 355 million parameters.
+# we load the medium-sized model with 355 million parameters.
 
 # The reason for this choice is that the 124 million parameter model is too limited in capacity
 # to achieve qualitatively satisfactory results via instruction finetuning.
@@ -1589,13 +1562,6 @@ for inputs, targets in train_loader:
 # This is done using the same code as in section 5.5 of chapter 5 and section 6.4 of
 # the previous chapter, except that we now specify "gpt2-medium (355M)" instead of "gpt2-small
 # (124M)".
-
-# Please note that executing the code provided below will initiate the download of
-# the medium-sized GPT model, which has a storage requirement of approximately 1.42
-# gigabytes.
-
-# This is roughly three times larger than the storage space needed for the small
-# model:
 
 from gpt_download import download_and_load_gpt2
 
@@ -1797,9 +1763,7 @@ print(f"Training completed in {execution_time_minutes:.2f} minutes.")
 # As we can see based on the outputs above, the model trains well, as we can tell based on the decreasing training loss and validation loss values.
 
 # Furthermore, based on the response text printed after each epoch, we can see that the model almost correctly follows the instruction to convert the input sentence 'The chef cooks the meal every day.' into passive voice 'The meal is prepared every day by the chef.' (We will properly format and evaluate the responses in a later section.
-
 # To get better results, we need to finetune the model for more epochs.
-
 # Finally, let's take a look at the training and validation loss curves
 
 import matplotlib.pyplot as plt
@@ -1837,7 +1801,6 @@ plot_losses(epochs_tensor, tokens_seen, train_losses, val_losses)
 # meaningful patterns and representations from the data. Then, as training progresses to the
 # second epoch, the losses continue to decrease but at a slower rate, suggesting that the
 # model is finetuning its learned representations and converging to a stable solution.
-
 
 # While the loss plot in figure 7.17 indicates that the model is training effectively, the most
 # crucial aspect is its performance in terms of response quality and correctness. In the
